@@ -2,7 +2,7 @@
 
 #include <model/calculatormodel.h>
 
-CalculatorPresenter::CalculatorPresenter(std::shared_ptr<CalculatorView> view)
+CalculatorPresenter::CalculatorPresenter(std::shared_ptr<ICalculatorView> view)
     : m_view(view)
     , m_model(std::make_unique<CalculatorModel>())
 {}
