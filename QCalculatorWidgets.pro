@@ -17,8 +17,7 @@ SOURCES += \
 HEADERS += \
     view/calculatorview.h \
     model/calculatormodel.h \
-    presenter/calculatorpresenter.h \
-    view/icalculatorview.h
+    presenter/calculatorpresenter.h
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

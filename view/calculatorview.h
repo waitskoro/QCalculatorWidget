@@ -5,28 +5,36 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QMainWindow>
-
-#include "icalculatorview.h"
+#include <QVBoxLayout>
+#include <QHBoxLayout>
 
 class ButtonsView;
 
 class CalculatorView : public QMainWindow
-                     , public ICalculatorView
 {
+    Q_OBJECT
 public:
     explicit CalculatorView(QWidget *parent = nullptr);
     ~CalculatorView();
+
+    void setResult(const QString& result);
+    void setExpression(const QString& expression);
+
+signals:
+    void buttonsClicked(const QString &btn);
 
 private:
     void setupUi();
     void setupDisplay();
     void setupButtons();
 
+private slots:
+    void onButtonClicked();
+
 private:
     std::shared_ptr<QWidget> m_display;
     std::shared_ptr<QWidget> m_buttons;
 
     QLabel *m_resultDisplay;
-    QLineEdit *m_expressionDisplay;
+    QLabel *m_expressionDisplay;
 };
-

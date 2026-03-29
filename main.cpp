@@ -8,7 +8,7 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
 
     auto view = std::make_shared<CalculatorView>();
-    view->resize(300, 450);
+    view->resize(300, 500);
 
     auto presenter = std::make_shared<CalculatorPresenter>(view);
 

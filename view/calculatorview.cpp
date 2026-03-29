@@ -13,8 +13,24 @@ CalculatorView::CalculatorView(QWidget *parent)
 }
 
 CalculatorView::~CalculatorView()
-{
+{}
 
+void CalculatorView::setResult(const QString& result)
+{
+    if (result.isEmpty()) {
+        m_resultDisplay->setText("0");
+    } else {
+        m_resultDisplay->setText(result);
+    }
+}
+
+void CalculatorView::setExpression(const QString& expression)
+{
+    if (expression.isEmpty()) {
+        m_expressionDisplay->setText("");
+    } else {
+        m_expressionDisplay->setText(expression);
+    }
 }
 
 void CalculatorView::setupUi()
@@ -41,21 +57,19 @@ void CalculatorView::setupDisplay()
 
     QLabel* equalsLabel = new QLabel("=");
     equalsLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    equalsLabel->setStyleSheet("font-size: 24px;");
     equalsLabel->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Preferred);
 
     m_resultDisplay = new QLabel("0");
     m_resultDisplay->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    m_resultDisplay->setStyleSheet("font-size: 32px; font-weight: bold; color: #333;");
     m_resultDisplay->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    m_resultDisplay->setMinimumHeight(50);
 
     topLayout->addWidget(equalsLabel);
     topLayout->addWidget(m_resultDisplay);
 
-    m_expressionDisplay = new QLineEdit();
-    m_expressionDisplay->setReadOnly(true);
+    m_expressionDisplay = new QLabel();
     m_expressionDisplay->setAlignment(Qt::AlignRight);
-    m_expressionDisplay->setPlaceholderText("0");
+    m_expressionDisplay->setText("");
 
     mainLayout->addLayout(topLayout);
     mainLayout->addWidget(m_expressionDisplay);
@@ -86,18 +100,35 @@ void CalculatorView::setupButtons()
                 buttons[row][col] = new QPushButton(buttonsData[row][col]);
                 buttons[row][col]->setMinimumSize(80, 60);
                 buttons[row][col]->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
                 buttonsLayout->addWidget(buttons[row][col], row, col);
+            }
+
+            if (buttons[row][col] != nullptr) {
+                connect(buttons[row][col], &QPushButton::clicked,
+                        this, &CalculatorView::onButtonClicked);
             }
         }
     }
 
-    buttonsLayout->removeWidget(buttons[3][3]);
-    buttonsLayout->addWidget(buttons[3][3], 3, 3, 2, 1);
+    if (buttons[3][3]) {
+        buttonsLayout->removeWidget(buttons[3][3]);
+        buttonsLayout->addWidget(buttons[3][3], 3, 3, 2, 1);
+    }
 
     for (int i = 0; i < 4; ++i) {
         buttonsLayout->setColumnStretch(i, 1);
     }
 
-    buttonsLayout->setSpacing(5);
+    buttonsLayout->setSpacing(15);
     buttonsLayout->setContentsMargins(10, 10, 10, 10);
+}
+
+void CalculatorView::onButtonClicked()
+{
+    QPushButton* button = qobject_cast<QPushButton*>(sender());
+    if (!button)
+        return;
+
+    emit buttonsClicked(button->text());
 }
