@@ -13,6 +13,8 @@ CalculatorPresenter::CalculatorPresenter(shared_view view,
 
     connect(m_model.get(), &CalculatorModel::dataChanged,
             this, &CalculatorPresenter::updateDisplay);
+
+    m_view->show();
 }
 
 CalculatorPresenter::~CalculatorPresenter()

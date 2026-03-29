@@ -7,6 +7,7 @@
 #include <QMainWindow>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
+#include <QPushButton>
 
 class ButtonsView;
 
@@ -17,6 +18,7 @@ public:
     explicit CalculatorView(QWidget *parent = nullptr);
     ~CalculatorView();
 
+    void setIsDarkTheme(bool theme);
     void setResult(const QString& result);
     void setExpression(const QString& expression);
 
@@ -27,6 +29,7 @@ private:
     void setupUi();
     void setupDisplay();
     void setupButtons();
+    QString formatExpression(const QString& expression);
 
 private slots:
     void onButtonClicked();
@@ -37,4 +40,6 @@ private:
 
     QLabel *m_resultDisplay;
     QLabel *m_expressionDisplay;
+
+    bool m_isDarkTheme = false;
 };

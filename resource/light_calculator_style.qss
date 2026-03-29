@@ -1,0 +1,94 @@
+QMainWindow {
+    background-color: white;
+}
+
+QWidget#displayWidget {
+    background-color: transparent;
+    min-height: 140px;
+}
+
+QLabel#equalsLabel {
+    color: #53D0E3;
+    font-size: 32px;
+    font-weight: bold;
+}
+
+QLabel#resultDisplay {
+    font-size: 36px;
+    font-weight: bold;
+    color: black;
+    min-height: 50px;
+}
+
+QLabel#expressionDisplay {
+    font-size: 22px;
+    color: black;
+    font-weight: bold;
+}
+
+QPushButton {
+    border-radius: 5px;
+    font-weight: bold;
+    min-width: 80px;
+    min-height: 60px;
+}
+
+QPushButton[type="operator"] {
+    background-color: #52C8DB;
+    color: white;
+    font-size: 28px;
+}
+
+QPushButton[type="operator"]:hover {
+    background-color: #3A8091;
+}
+
+QPushButton[type="operator"]:pressed {
+    background-color: #2A6070;
+}
+
+QPushButton[type="number"] {
+    background-color: #F2F7FB;
+    color: black;
+    font-size: 24px;
+}
+
+QPushButton[type="number"]:hover {
+    background-color: #3A8091;
+}
+
+QPushButton[type="number"]:pressed {
+    background-color: #d0d0d0;
+}
+
+QPushButton[type="equals"] {
+    background-color: #52C8DB;
+    color: white;
+    font-size: 46px;
+    font-weight: bold;
+}
+
+QPushButton[type="equals"]:hover {
+    background-color: #3A8091;
+}
+
+QPushButton[type="equals"]:pressed {
+    background-color: #2A6070;
+}
+
+QPushButton[type="clear"] {
+    background-color: #52C8DB;
+    font-size: 24px;
+}
+
+QPushButton[type="modifier"] {
+    background-color: #52C8DB;
+    font-size: 24px;
+}
+
+QPushButton[type="decimal"] {
+    background-color: #1D2334;
+    color: white;
+    font-size: 28px;
+    font-weight: bold;
+}

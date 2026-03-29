@@ -2,8 +2,7 @@
 
 #include <QObject>
 #include <QString>
-#include <stack>
-#include <memory>
+#include <QStack>
 
 class CalculatorModel : public QObject
 {
@@ -24,16 +23,15 @@ signals:
     void dataChanged(const QString& expression, const QString& result);
 
 private:
-    QString m_result;
+    QString m_expression;
     QString m_currentNumber;
-    bool m_waitingForOperand;
-    QString m_currentExpression;
+    QString m_result;
+    bool m_newNumberExpected;
 
-    void update();
+    void updateData();
     QString formatNumber(double value);
-    bool isOperator(const QString& str);
-    int getPrecedence(const QString& op);
-    double evaluateExpression(const QString& expression);
-    bool isUnaryMinus(const QString& expression, int index);
+    double evaluateExpression(const QString& expr);
     double applyOperator(double a, double b, const QString& op);
+    bool isOperator(const QChar& ch);
+    int getPrecedence(const QString& op);
 };

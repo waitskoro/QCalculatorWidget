@@ -1,19 +1,28 @@
 #include "calculatorview.h"
-
 #include <QPushButton>
 #include <QGridLayout>
-#include <QGraphicsAnchorLayout>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QFile>
+#include <QDebug>
 
 CalculatorView::CalculatorView(QWidget *parent)
     : QMainWindow(parent)
     , m_display(std::make_shared<QWidget>(this))
     , m_buttons(std::make_shared<QWidget>(this))
 {
+    resize(300, 500);
     setupUi();
 }
 
 CalculatorView::~CalculatorView()
 {}
+
+
+void CalculatorView::setIsDarkTheme(bool theme)
+{
+    m_isDarkTheme = theme;
+}
 
 void CalculatorView::setResult(const QString& result)
 {
@@ -29,19 +38,20 @@ void CalculatorView::setExpression(const QString& expression)
     if (expression.isEmpty()) {
         m_expressionDisplay->setText("");
     } else {
-        m_expressionDisplay->setText(expression);
+        m_expressionDisplay->setText(formatExpression(expression));
     }
 }
 
 void CalculatorView::setupUi()
 {
-    setupDisplay();
-    setupButtons();
 
     QGridLayout *gridLayout = new QGridLayout();
     QWidget *w = new QWidget(this);
     w->setLayout(gridLayout);
     setCentralWidget(w);
+
+    setupDisplay();
+    setupButtons();
 
     gridLayout->addWidget(m_display.get());
     gridLayout->addWidget(m_buttons.get());
@@ -49,6 +59,8 @@ void CalculatorView::setupUi()
 
 void CalculatorView::setupDisplay()
 {
+    m_display->setObjectName("displayWidget");
+
     QVBoxLayout* mainLayout = new QVBoxLayout(m_display.get());
     mainLayout->setSpacing(5);
 
@@ -56,18 +68,20 @@ void CalculatorView::setupDisplay()
     topLayout->setSpacing(10);
 
     QLabel* equalsLabel = new QLabel("=");
+    equalsLabel->setObjectName("equalsLabel");
     equalsLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     equalsLabel->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Preferred);
 
     m_resultDisplay = new QLabel("0");
+    m_resultDisplay->setObjectName("resultDisplay");
     m_resultDisplay->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     m_resultDisplay->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    m_resultDisplay->setMinimumHeight(50);
 
     topLayout->addWidget(equalsLabel);
     topLayout->addWidget(m_resultDisplay);
 
     m_expressionDisplay = new QLabel();
+    m_expressionDisplay->setObjectName("expressionDisplay");
     m_expressionDisplay->setAlignment(Qt::AlignRight);
     m_expressionDisplay->setText("");
 
@@ -97,20 +111,33 @@ void CalculatorView::setupButtons()
     for (int row = 0; row < 5; ++row) {
         for (int col = 0; col < 4; ++col) {
             if (buttonsData[row][col]) {
-                buttons[row][col] = new QPushButton(buttonsData[row][col]);
-                buttons[row][col]->setMinimumSize(80, 60);
-                buttons[row][col]->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+                QPushButton* button = new QPushButton(buttonsData[row][col]);
+                QString btnText = buttonsData[row][col];
 
-                buttonsLayout->addWidget(buttons[row][col], row, col);
-            }
+                button->setMinimumSize(80, 60);
+                button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
-            if (buttons[row][col] != nullptr) {
-                connect(buttons[row][col], &QPushButton::clicked,
+                if (btnText == "=") {
+                    button->setProperty("type", "equals");
+                }
+                else if (btnText == "CE" || btnText == "+/-" || btnText == "%" ||
+                         btnText == "/" || btnText == "*" || btnText == "-" || btnText == "+") {
+                    button->setProperty("type", "operator");
+                }
+                else if ((btnText >= "0" && btnText <= "9") || btnText == ".") {
+                    button->setProperty("type", "number");
+                }
+
+                buttons[row][col] = button;
+                buttonsLayout->addWidget(button, row, col);
+
+                connect(button, &QPushButton::clicked,
                         this, &CalculatorView::onButtonClicked);
             }
         }
     }
 
+    // Кнопка "+" занимает 2 ряда
     if (buttons[3][3]) {
         buttonsLayout->removeWidget(buttons[3][3]);
         buttonsLayout->addWidget(buttons[3][3], 3, 3, 2, 1);
@@ -122,6 +149,32 @@ void CalculatorView::setupButtons()
 
     buttonsLayout->setSpacing(15);
     buttonsLayout->setContentsMargins(10, 10, 10, 10);
+}
+
+QString CalculatorView::formatExpression(const QString& expression)
+{
+    QString formatted;
+
+    for (int i = 0; i < expression.length(); ++i) {
+        QChar ch = expression[i];
+
+        if (ch.isDigit() || ch == '.') {
+            QString color = m_isDarkTheme ? "white" : "black";
+            QString formated = "<span style='color:" + color + ";'>" + QString(ch) + "</span>";
+            formatted += formated;
+        } else {
+            QString op = ch;
+            if (ch == '*')
+                op = "x";
+            if (ch == '%') {
+                formatted += "<span style='color: #51C9DC;'>" + op + "</span>";
+            } else {
+                formatted += "<span style='color: #51C9DC;'> " + op + " </span>";
+            }
+        }
+    }
+
+    return formatted;
 }
 
 void CalculatorView::onButtonClicked()

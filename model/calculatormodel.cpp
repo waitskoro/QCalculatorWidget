@@ -1,26 +1,24 @@
 #include "calculatormodel.h"
 #include <QRegularExpression>
-#include <stack>
-#include <vector>
-#include <sstream>
 #include <cmath>
+#include <QDebug>
 
 CalculatorModel::CalculatorModel(QObject *parent)
     : QObject(parent)
+    , m_expression("")
+    , m_currentNumber("")
     , m_result("0")
-    , m_waitingForOperand(false)
+    , m_newNumberExpected(false)
 {
-    clear();
 }
 
 void CalculatorModel::clear()
 {
-    m_result = "0";
+    m_expression.clear();
     m_currentNumber.clear();
-    m_currentExpression.clear();
-    m_waitingForOperand = false;
-
-    update();
+    m_result = "0";
+    m_newNumberExpected = false;
+    updateData();
 }
 
 void CalculatorModel::backspace()
@@ -30,68 +28,31 @@ void CalculatorModel::backspace()
         if (m_currentNumber.isEmpty()) {
             m_currentNumber = "0";
         }
-        update();
-    } else if (!m_currentExpression.isEmpty()) {
-        m_currentExpression.chop(1);
-        update();
+        updateData();
+    } else if (!m_expression.isEmpty()) {
+        m_expression.chop(1);
+        updateData();
     }
 }
 
-void CalculatorModel::calculate()
+void CalculatorModel::addDigit(const QString& digit)
 {
-    QString fullExpression = m_currentExpression;
-
-    if (!m_currentNumber.isEmpty()) {
-        fullExpression += m_currentNumber;
-    }
-
-    if (fullExpression.isEmpty()) {
-        m_result = "0";
-        update();
-    }
-
-    if (isOperator(fullExpression.right(1))) {
-        fullExpression.chop(1);
-    }
-
-    if (fullExpression == "-") {
-        m_result = "Error";
-        update();
-    }
-
-    double result = evaluateExpression(fullExpression);
-
-    if (std::isinf(result) || std::isnan(result)) {
-        m_result = "Error";
-        m_currentExpression.clear();
+    if (m_newNumberExpected) {
         m_currentNumber.clear();
-        update();
+        m_newNumberExpected = false;
     }
 
-    m_result = formatNumber(result);
-
-    m_currentExpression = fullExpression;
-    m_currentNumber.clear();
-    m_waitingForOperand = true;
-
-    update();
-}
-
-void CalculatorModel::toggleSign()
-{
-    if (!m_currentNumber.isEmpty()) {
-        double num = m_currentNumber.toDouble();
-        num = -num;
-        m_currentNumber = formatNumber(num);
-        update();
+    if (m_currentNumber.length() < 15) {
+        m_currentNumber += digit;
+        updateData();
     }
 }
 
 void CalculatorModel::addDecimal()
 {
-    if (m_waitingForOperand) {
+    if (m_newNumberExpected) {
         m_currentNumber.clear();
-        m_waitingForOperand = false;
+        m_newNumberExpected = false;
     }
 
     if (!m_currentNumber.contains('.')) {
@@ -100,65 +61,85 @@ void CalculatorModel::addDecimal()
         } else {
             m_currentNumber += ".";
         }
-        update();
+        updateData();
+    }
+}
+
+void CalculatorModel::toggleSign()
+{
+    if (!m_currentNumber.isEmpty() && m_currentNumber != "0") {
+        double num = m_currentNumber.toDouble();
+        num = -num;
+        m_currentNumber = formatNumber(num);
+        updateData();
     }
 }
 
 void CalculatorModel::addOperator(const QString& op)
 {
-    if (m_currentExpression.isEmpty() && m_currentNumber.isEmpty() && op == "-") {
-        m_currentExpression = "-";
-        m_waitingForOperand = true;
-        update();
-        return;
-    }
-
-    if (m_currentNumber.isEmpty() && !m_currentExpression.isEmpty() &&
-        isOperator(m_currentExpression.right(1))) {
-        if (op != "-" || m_currentExpression.right(1) != "-") {
-            m_currentExpression.chop(1);
-            m_currentExpression += op;
-        } else {
-            m_currentExpression.chop(1);
+    if (m_expression.isEmpty() && m_currentNumber.isEmpty()) {
+        if (op == "-") {
+            m_currentNumber = "-";
+            updateData();
         }
-        update();
         return;
     }
 
     if (!m_currentNumber.isEmpty()) {
-        m_currentExpression += m_currentNumber;
+        m_expression += m_currentNumber;
         m_currentNumber.clear();
     }
 
-    if (!m_currentExpression.isEmpty()) {
-        m_currentExpression += op;
-        m_waitingForOperand = true;
-        update();
+    if (!m_expression.isEmpty()) {
+        QChar lastChar = m_expression.back();
+        if (isOperator(lastChar)) {
+            m_expression.chop(1);
+        }
+        m_expression += op;
+        m_newNumberExpected = true;
+        updateData();
     }
 }
 
-void CalculatorModel::addDigit(const QString& digit)
+void CalculatorModel::calculate()
 {
-    if (m_waitingForOperand) {
+    QString fullExpression = m_expression;
+
+    if (!m_currentNumber.isEmpty()) {
+        fullExpression += m_currentNumber;
+    }
+
+    if (fullExpression.isEmpty()) {
+        m_result = "0";
+        updateData();
+        return;
+    }
+
+    QChar lastChar = fullExpression.back();
+    if (isOperator(lastChar)) {
+        fullExpression.chop(1);
+    }
+
+    double result = evaluateExpression(fullExpression);
+
+    if (std::isnan(result) || std::isinf(result)) {
+        m_result = "Error";
+        m_expression.clear();
         m_currentNumber.clear();
-        m_waitingForOperand = false;
+        updateData();
+        return;
     }
 
-    if (m_currentNumber.length() < 15) {
-        m_currentNumber += digit;
-        update();
-    }
+    m_result = formatNumber(result);
+
+    updateData();
 }
 
-void CalculatorModel::update()
+void CalculatorModel::updateData()
 {
-    QString expression = m_currentExpression;
+    QString expression = m_expression;
     if (!m_currentNumber.isEmpty()) {
         expression += m_currentNumber;
-    }
-
-    if (expression.isEmpty()) {
-        expression = "";
     }
 
     emit dataChanged(expression, m_result);
@@ -166,12 +147,11 @@ void CalculatorModel::update()
 
 QString CalculatorModel::formatNumber(double value)
 {
-    if (std::isinf(value) || std::isnan(value)) {
+    if (std::isnan(value) || std::isinf(value)) {
         return "Error";
     }
 
     QString str = QString::number(value, 'f', 10);
-
     str.remove(QRegularExpression("0+$"));
     str.remove(QRegularExpression("\\.$"));
 
@@ -182,9 +162,71 @@ QString CalculatorModel::formatNumber(double value)
     return str;
 }
 
-bool CalculatorModel::isOperator(const QString& str)
+double CalculatorModel::evaluateExpression(const QString& expr)
 {
-    return str == "+" || str == "-" || str == "*" || str == "/";
+    QStack<double> values;
+    QStack<QString> operators;
+    QString currentNumber;
+    bool expectUnary = true;
+
+    for (int i = 0; i < expr.length(); ++i) {
+        QChar ch = expr[i];
+
+        if (ch.isDigit() || ch == '.') {
+            currentNumber += ch;
+            expectUnary = false;
+        }
+        else if (isOperator(ch)) {
+            if (!currentNumber.isEmpty()) {
+                values.push(currentNumber.toDouble());
+                currentNumber.clear();
+            }
+
+            QString op(ch);
+
+            if (op == "-" && expectUnary) {
+                currentNumber = "-";
+                continue;
+            }
+
+            while (!operators.isEmpty() &&
+                   getPrecedence(operators.top()) >= getPrecedence(op)) {
+                double b = values.pop();
+                double a = values.pop();
+                values.push(applyOperator(a, b, operators.pop()));
+            }
+            operators.push(op);
+            expectUnary = true;
+        }
+    }
+
+    if (!currentNumber.isEmpty()) {
+        values.push(currentNumber.toDouble());
+    }
+
+    while (!operators.isEmpty()) {
+        double b = values.pop();
+        double a = values.pop();
+        values.push(applyOperator(a, b, operators.pop()));
+    }
+
+    return values.isEmpty() ? 0 : values.top();
+}
+
+double CalculatorModel::applyOperator(double a, double b, const QString& op)
+{
+    switch (op[0].toLatin1()) {
+        case '+': return a + b;
+        case '-': return a - b;
+        case '*': return a * b;
+        case '/': return (b != 0) ? a / b : 0;
+        default: return 0;
+    }
+}
+
+bool CalculatorModel::isOperator(const QChar& ch)
+{
+    return ch == '+' || ch == '-' || ch == '*' || ch == '/';
 }
 
 int CalculatorModel::getPrecedence(const QString& op)
@@ -193,93 +235,3 @@ int CalculatorModel::getPrecedence(const QString& op)
     if (op == "*" || op == "/") return 2;
     return 0;
 }
-
-double CalculatorModel::evaluateExpression(const QString& expression)
-{
-    std::stack<double> values;
-    std::stack<QString> operators;
-
-    QString currentNumber;
-
-    for (int i = 0; i < expression.length(); ++i) {
-        QChar ch = expression[i];
-
-        if (ch.isDigit() || ch == '.') {
-            currentNumber += ch;
-        } else if (ch == '(') {
-            operators.push("(");
-        } else if (ch == ')') {
-            if (!currentNumber.isEmpty()) {
-                values.push(currentNumber.toDouble());
-                currentNumber.clear();
-            }
-
-            while (!operators.empty() && operators.top() != "(") {
-                double b = values.top(); values.pop();
-                double a = values.top(); values.pop();
-                QString op = operators.top(); operators.pop();
-                values.push(applyOperator(a, b, op));
-            }
-            if (!operators.empty()) operators.pop();
-        } else if (isOperator(ch)) {
-            if (!currentNumber.isEmpty()) {
-                values.push(currentNumber.toDouble());
-                currentNumber.clear();
-            }
-
-            QString op(ch);
-
-            if (op == "-" && (i == 0 || expression[i-1] == '(' || isOperator(expression[i-1]))) {
-                values.push(0.0);
-            }
-
-            while (!operators.empty() &&
-                   getPrecedence(operators.top()) >= getPrecedence(op) &&
-                   operators.top() != "(") {
-                double b = values.top(); values.pop();
-                double a = values.top(); values.pop();
-                QString topOp = operators.top(); operators.pop();
-                values.push(applyOperator(a, b, topOp));
-            }
-            operators.push(op);
-        }
-    }
-
-    if (!currentNumber.isEmpty()) {
-        values.push(currentNumber.toDouble());
-    }
-
-    while (!operators.empty()) {
-        if (values.size() < 2) {
-            if (operators.top() == "-" && values.size() == 1) {
-                double a = values.top(); values.pop();
-                return -a;
-            }
-            return 0;
-        }
-        double b = values.top(); values.pop();
-        double a = values.top(); values.pop();
-        QString op = operators.top(); operators.pop();
-        values.push(applyOperator(a, b, op));
-    }
-
-    return values.empty() ? 0 : values.top();
-}
-
-bool CalculatorModel::isUnaryMinus(const QString& expression, int index)
-{
-    if (index == 0) return true;
-
-    QChar prevChar = expression[index - 1];
-    return isOperator(prevChar) || prevChar == '(';
-}
-
-double CalculatorModel::applyOperator(double a, double b, const QString& op)
-{
-    if (op == "+") return a + b;
-    if (op == "-") return a - b;
-    if (op == "*") return a * b;
-    if (op == "/") return b != 0 ? a / b : 0;
-    return 0;
-}
-
