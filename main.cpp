@@ -13,11 +13,14 @@ int main(int argc, char *argv[])
     auto presenter = std::make_shared<CalculatorPresenter>(view);
 
     QString styleFile;
-    if (0) {
+    bool isDarkMode = true;
+    if (isDarkMode) {
         styleFile = ":/resource/dark_calculator_style.qss";
     } else {
         styleFile = ":/resource/light_calculator_style.qss";
     }
+
+    view->setIsDarkTheme(isDarkMode);
 
     QFile file(styleFile);
     if (file.open(QFile::ReadOnly)) {
